@@ -1,12 +1,16 @@
 # @Author: jamil
 # @Date:   2021-04-15T13:46:34-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-04-15T13:46:57-05:00
+# @Last modified time: 2021-05-18T16:37:34-05:00
 
 
 import argparse
 import os
 import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--dataset",
@@ -30,31 +34,20 @@ def load_dataset_from_file(dataset_file_location):
 
 
 def extractRequiredColumn(df,requiredFields):
-    # return self.dataset[[requiredFields]]
     return df[df.columns[df.columns.isin(requiredFields)]]
 
 def NormalizeData(df):
-    #min-max normalization
-    # return (df - df.min()) / (df.max() - df.min())
-    # max normalization
-    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-    #       # more options can be specified also
-    #     print(df)
-
-    # the replace operation is done with whole dataFrame
     df_no_NA=df.replace(to_replace="na",value= 1).astype(float) # line replace any 'na' in the dataset with 0
-
-    # df_no_NA=pd.to_numeric(df_no_NA)
-    #df=df.map({'na':1})
-    # mymap = {'na':1, 'N/A':1}
-    # df_no_NA=df.applymap(lambda s: mymap.get(s) if s in mymap else s)
-    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-    #       # more options can be specified also
-    #     print(df_no_NA)
-    # print("MAX:",df_no_NA.max())
-    # print("ABS:",df_no_NA.abs())
     return df_no_NA/df_no_NA.max()
 
+def set_labels(dataFrame,LabelName):
+    return np.array(dataFrame[LabelName])
+
+def set_features(dataFrame,LabelName,dropFeatureList):
+    dataFrame= dataFrame.drop(LabelName, axis = 1)
+    for i in dropFeatureList:
+        dataFrame= dataFrame.drop(i, axis = 1)
+    return dataFrame
 
 class ReadFile:
     def __init__(self,
@@ -65,6 +58,11 @@ class ReadFile:
         self.requiredData=extractRequiredColumn(self.dataset,requiredFields)
         self.requiredNormalizedData=NormalizeData(self.requiredData)
 
+class pd2Array:
+    def __init__(self,dataFrame,LabelName,dropFeatureList):
+
+        self.labels=set_labels(dataFrame,LabelName)
+        self.features=set_features(dataFrame,LabelName,dropFeatureList)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -72,19 +70,20 @@ if __name__ == "__main__":
     requiredFields=['FileSize', 'FileCount',
    'Bandwidth', 'RTT', 'BufferSize', 'Parallelism', 'Concurrency',
    'Pipelining', 'Throughput']
-
+    LabelName='Throughput'
+    dropFeatureList=['Parallelism', 'Concurrency',
+   'Pipelining']
    # fileData is an object of ReadFile class
 
     fileData=ReadFile(args.dataset,requiredFields)
 
-    # print(fileData.dataset.columns)
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-          # more options can be specified also
-        print(fileData.requiredData)
-    # print(fileData.requiredData.columns)
-    # print(type(fileData.requiredData.iloc[0]['Concurrency']))
-    # print(type(fileData.requiredData.iloc[1]['Concurrency']))
-    # print(type(fileData.requiredData.iloc[1]['BufferSize']))
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-          # more options can be specified also
-        print(fileData.requiredNormalizedData)
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    #       # more options can be specified also
+    #     print(fileData.requiredNormalizedData)
+    # print(fileData.requiredNormalizedData['FileSize'])
+
+
+    print(fileData.requiredNormalizedData.describe())
+    processedData=pd2Array(fileData.requiredNormalizedData,LabelName,dropFeatureList)
+    print(processedData.labels,len(processedData.labels)) # processedData.labels is np.array
+    print(processedData.features,processedData.features.shape) #processedData.features are dataFrame
