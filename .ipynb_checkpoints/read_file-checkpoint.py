@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # print(fileData.requiredNormalizedData['FileSize'])
 
 
-    print(fileData.requiredNormalizedData.describe())
+    # print(fileData.requiredNormalizedData.describe())
     processedData=pd2Array(fileData.requiredNormalizedData,LabelName,dropFeatureList)
     # print(processedData.labels,len(processedData.labels)) # processedData.labels is np.array
     # print(processedData.features,processedData.features.shape) #processedData.features are dataFrame
