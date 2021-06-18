@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T18:06:03-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-12T00:01:42-05:00
+# @Last modified time: 2021-06-18T17:10:21-05:00
 
 import argparse
 import os
@@ -33,7 +33,7 @@ class ReadFile:
         # print(self.dataset)
         for index, row in self.requiredData.iterrows():
             self.logs.append(
-            Log(index,[row['FileSize'], row['FileCount'],row['Bandwidth'],row['RTT'],row['BufferSize'],row['Parallelism'],row['Concurrency'],row['Pipelining'],row['Throughput'],]))
+            Log(index,[row['FileSize'], row['FileCount'],row['Bandwidth'],row['RTT'],row['BufferSize'],row['Parallelism'],row['Concurrency'],row['Pipelining'],row['Throughput']]))
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -52,8 +52,13 @@ if __name__ == "__main__":
     for i in requiredFields:
         ranges.append(fileData.dataset[i].min())
         ranges.append(fileData.dataset[i].max())
-
-    root=Node(0,ranges,fileData.logs,0)
+    tree=Tree(fileData.logs,2,ranges,"DI")
+    #root=Node(0,0,ranges,fileData.logs,0)
     # for i in fileData.logs:
     #     print (i)
-    print(root)
+    # print(tree)
+    # print(tree.current_node.id)
+    tree.cut_node(tree.current_node,0,2)
+
+    print(tree)
+    # print(root.logs_df)
