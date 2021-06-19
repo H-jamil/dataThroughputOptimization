@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T18:06:03-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-18T17:10:21-05:00
+# @Last modified time: 2021-06-19T16:33:51-05:00
 
 import argparse
 import os
@@ -13,6 +13,7 @@ from sklearn.tree import export_graphviz
 import pydot
 import matplotlib.pyplot as plt
 from tree import *
+import time
 
 
 parser = argparse.ArgumentParser()
@@ -53,12 +54,70 @@ if __name__ == "__main__":
         ranges.append(fileData.dataset[i].min())
         ranges.append(fileData.dataset[i].max())
     tree=Tree(fileData.logs,2,ranges,"DI")
+
+    # nodes_to_operate=[]
+    # for i in tree.nodes_to_cut:
+    #     nodes_to_operate.append(i.id)
+    # print("nodes to cut:",nodes_to_operate)
+
     #root=Node(0,0,ranges,fileData.logs,0)
     # for i in fileData.logs:
     #     print (i)
     # print(tree)
     # print(tree.current_node.id)
-    tree.cut_node(tree.current_node,0,2)
+    # while(len(tree.nodes_to_cut)>=1):
+    # print("current_node %d"%tree.current_node.id)
+    # nodes=[tree.root]
+    # while len(nodes) !=0:
+    #     next_layer_nodes=[]
+    #     for node in nodes:
+    #         if len(node.logs) > tree.leaf_threshold:
+    #             tree.cut_node(node,0,2)
+    #         for child in node.children:
+    #             next_layer_nodes.extend(node.children)
+    #     nodes=next_layer_nodes
+    #     # print(nodes)
+    #     nodes_to_operate=[]
+    #     for i in tree.nodes_to_cut:
+    #         nodes_to_operate.append(i.id)
+    #     print("nodes to cut:",nodes_to_operate)
+    #     time.sleep(1)
+    nodes_to_operate=[]
+    for i in tree.nodes_to_cut:
+        nodes_to_operate.append(i.id)
+    print("nodes to cut:",nodes_to_operate)
+    while len(tree.nodes_to_cut)!=0:
+        if not tree.is_leaf(tree.current_node):
+            print("cutting node %d now" %tree.current_node.id)
+            tree.cut_node(tree.current_node,2,4)
+            nodes_to_operate=[]
+            for i in tree.nodes_to_cut:
+                nodes_to_operate.append(i.id)
+            print("nodes to cut:",nodes_to_operate)
+        else:
+            print("escaping node %d as a leaf node"%tree.current_node.id)
+            tree.get_next_node()
+            nodes_to_operate=[]
+            for i in tree.nodes_to_cut:
+                nodes_to_operate.append(i.id)
+            print("nodes to cut:",nodes_to_operate)
+
+        time.sleep(4)
+
+
 
     print(tree)
+
+    # nodes_to_operate=[]
+    # for i in tree.nodes_to_cut:
+    #     nodes_to_operate.append(i.id)
+    # print("nodes to cut:",nodes_to_operate)
+    # # print("current_node %d"%tree.current_node.id)
+    # tree.cut_node(tree.current_node,0,2)
+    # nodes_to_operate=[]
+    # for i in tree.nodes_to_cut:
+    #     nodes_to_operate.append(i.id)
+    # print("nodes to cut:",nodes_to_operate)
+    # print("current_node %d"%tree.current_node.id)
+    # print(tree)
     # print(root.logs_df)

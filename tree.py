@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T16:50:09-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-18T17:11:06-05:00
+# @Last modified time: 2021-06-19T15:55:29-05:00
 
 import math
 import random
@@ -140,6 +140,14 @@ class Tree:
     def is_finish(self):
         return len(self.nodes_to_cut) == 0
 
+    def get_next_node(self):
+        self.nodes_to_cut.pop()
+        if len(self.nodes_to_cut) > 0:
+            self.current_node = self.nodes_to_cut[-1]
+        else:
+            self.current_node = None
+        return self.current_node
+
     def update_tree(self, node, children):
         # if self.refinements["node_merging"]:
         #     children = self.refinement_node_merging(children)
@@ -155,6 +163,7 @@ class Tree:
         self.nodes_to_cut.pop()
         self.nodes_to_cut.extend(children)
         self.current_node = self.nodes_to_cut[-1]
+        # print("current_node %d"%self.current_node.id)
 
     def cut_node(self, node, cut_dimension, cut_num):
         # self.node_count += 1
@@ -166,6 +175,12 @@ class Tree:
         child_cut_dimension_ranges=get_the_non_overlapping_ranges(range_left,range_right,range_per_cut,cut_num)
         # print(range_left,range_right,range_per_cut)
         children = []
+        # if self.is_leaf(node):
+        #     print("true")
+        #     self.nodes_to_cut.pop()
+        #     self.current_node = self.nodes_to_cut[-1]
+        #     print("current_node %d"%self.current_node.id)
+        #     return None
         assert cut_num > 0, (cut_dimension, cut_num)
         for i in range(cut_num):
             child_ranges = list(node.ranges)
