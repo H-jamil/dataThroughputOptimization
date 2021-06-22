@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T16:50:09-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-19T15:55:29-05:00
+# @Last modified time: 2021-06-19T22:45:41-05:00
 
 import math
 import random
@@ -9,9 +9,6 @@ import numpy as np
 import re
 import sys
 import pandas as pd
-
-# sys.setrecursionlimit(99999)
-# SPLIT_CACHE = {}
 
 class Log:
     def __init__(self, serialNo, values):
@@ -50,15 +47,15 @@ def load_dataset_from_file(dataset_file_location):
     return result_df
 
 class Edge:
-    def __init__(self,parent_node,child_node):
+    def __init__(self,parent_node,child_node,attr_selected,attr_value_range):
         self.parent_node=parent_node
         self.child_node=child_node
-        self.attr_selected=None
-        self.attr_value_range=[]
+        self.attr_selected=attr_selected
+        self.attr_value_range=attr_value_range
 
     def __str__(self):
-        result="parent "+str(self.parent_node.id)+ " child "+str(self.child_node.id) + "attribute " +str(attr_selected)+ \
-                "attribute range "+str(self.attr_value_range[0])+","+str(self.attr_value_range[1])
+        result="parent "+str(self.parent_node.id)+ " child "+str(self.child_node.id) + " attribute " +str(self.attr_selected)+ \
+                " attribute range "+str(self.attr_value_range[0])+","+str(self.attr_value_range[1])
         return result
 
 class Node:
@@ -108,6 +105,19 @@ def get_the_non_overlapping_ranges(range_left,range_right,range_per_cut,cut_num)
             ranges.append(min(range_right, (range_left + (i + 1) * range_per_cut)))
     return ranges
 
+def same_values_on_dimensionX(node,cut_dimension):
+    values_to_be_considered=[]
+    unique_value_list=[]
+    for log in node.logs:
+        values_to_be_considered.append(log.values[cut_dimension])
+    for value in values_to_be_considered:
+        if value not in unique_value_list:
+            unique_value_list.append(value)
+    if len(unique_value_list)>1:
+        return False
+    else:
+        return True
+
 class Tree:
     def __init__(
             self,
@@ -134,8 +144,8 @@ class Tree:
     def get_current_node(self):
         return self.current_node
 
-    def is_leaf(self, node):
-        return len(node.logs) <= self.leaf_threshold
+    def is_leaf(self,node,cut_dimension):
+        return (len(node.logs) <= self.leaf_threshold) or (same_values_on_dimensionX(node,cut_dimension))
 
     def is_finish(self):
         return len(self.nodes_to_cut) == 0
@@ -175,6 +185,7 @@ class Tree:
         child_cut_dimension_ranges=get_the_non_overlapping_ranges(range_left,range_right,range_per_cut,cut_num)
         # print(range_left,range_right,range_per_cut)
         children = []
+        children_edges=[]
         # if self.is_leaf(node):
         #     print("true")
         #     self.nodes_to_cut.pop()
@@ -186,7 +197,6 @@ class Tree:
             child_ranges = list(node.ranges)
             child_ranges[cut_dimension * 2] = child_cut_dimension_ranges[2*i]
             child_ranges[cut_dimension * 2 + 1] = child_cut_dimension_ranges[2*i+1]
-
             child_logs = []
             for log in node.logs:
                 if log.is_intersect(cut_dimension,
@@ -205,10 +215,13 @@ class Tree:
             # if len(child_logs)==0:
 
             child = self.create_node(self.node_count,node.id,child_ranges,
-                                     child_logs, node.depth + 1,0)
+                                     child_logs, node.depth + 1,cut_dimension)
+            edge=Edge(node,child,cut_dimension,[child_ranges[cut_dimension * 2],child_ranges[cut_dimension * 2+1]])
             children.append(child)
+            children_edges.append(edge)
             self.node_count += 1
 
+        node.edges=children_edges
         self.update_tree(node, children)
         return children
 

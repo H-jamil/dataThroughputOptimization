@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T18:06:03-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-19T16:33:51-05:00
+# @Last modified time: 2021-06-19T22:44:15-05:00
 
 import argparse
 import os
@@ -82,14 +82,16 @@ if __name__ == "__main__":
     #         nodes_to_operate.append(i.id)
     #     print("nodes to cut:",nodes_to_operate)
     #     time.sleep(1)
+    cut_dimension=0
+    cut_num=4
     nodes_to_operate=[]
     for i in tree.nodes_to_cut:
         nodes_to_operate.append(i.id)
     print("nodes to cut:",nodes_to_operate)
     while len(tree.nodes_to_cut)!=0:
-        if not tree.is_leaf(tree.current_node):
+        if not tree.is_leaf(tree.current_node,cut_dimension):
             print("cutting node %d now" %tree.current_node.id)
-            tree.cut_node(tree.current_node,2,4)
+            tree.cut_node(tree.current_node,cut_dimension,cut_num)
             nodes_to_operate=[]
             for i in tree.nodes_to_cut:
                 nodes_to_operate.append(i.id)
@@ -102,12 +104,14 @@ if __name__ == "__main__":
                 nodes_to_operate.append(i.id)
             print("nodes to cut:",nodes_to_operate)
 
-        time.sleep(4)
+        # time.sleep(1)
 
 
 
     print(tree)
-
+    print("##########################")
+    for edge in tree.root.edges:
+        print(edge)
     # nodes_to_operate=[]
     # for i in tree.nodes_to_cut:
     #     nodes_to_operate.append(i.id)
