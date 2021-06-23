@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T16:50:09-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-19T22:45:41-05:00
+# @Last modified time: 2021-06-23T10:13:58-05:00
 
 import math
 import random
@@ -9,6 +9,7 @@ import numpy as np
 import re
 import sys
 import pandas as pd
+from collections import Counter
 
 class Log:
     def __init__(self, serialNo, values):
@@ -59,7 +60,7 @@ class Edge:
         return result
 
 class Node:
-    def __init__(self,id,parent,ranges,logs,depth,attribute):
+    def __init__(self,id,parent,ranges,logs,depth,attribute,cut_dimension):
         self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism', 'Concurrency','Pipelining', 'Throughput']
         self.id = id
         self.parent=parent
@@ -74,12 +75,14 @@ class Node:
         else:
             self.cut_attribute=self.names[attribute]
         self.edges=[]
+        self.cut_dimension=cut_dimension
 
-    def get_df():
-        self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism', 'Concurrency','Pipelining', 'Throughput']
+    def get_df(self):
+        #self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism', 'Concurrency','Pipelining', 'Throughput']
+        self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize']
         self.log_values=[]
         for l in self.logs:
-            self.log_values.append(l.values)
+            self.log_values.append(l.values[0:5])
         self.logs_df=pd.DataFrame(self.log_values)
         self.logs_df.columns=self.names
         return self.logs_df
@@ -118,6 +121,47 @@ def same_values_on_dimensionX(node,cut_dimension):
     else:
         return True
 
+
+def diversityIndex(normalizedList):
+    occuranceValue=0
+    # maxvalue=max(inputList)
+    # normalizedList=[x / maxvalue for x in inputList]
+    normMaxvalue=max(normalizedList)
+    normMinvalue=min(normalizedList)
+    #res is a list without the duplicates
+    res = [i for n, i in enumerate(normalizedList) if i not in normalizedList[:n]] # removing the duplicates
+    #print(normalizedList)
+    #print(res)
+    d = Counter(normalizedList)
+    for x in res:
+        #print('{} has occurred {} times'.format(x, d[x]))
+        #occuranceValue+=x/d[x]
+        occuranceValue+=1/d[x]
+        # occuranceValue+=(-x/d[x])*(math.log((x/d[x]),2))
+
+    # print("occuranceValue", occuranceValue)
+
+    diversityIn=(occuranceValue)*((normMaxvalue-normMinvalue))
+    return diversityIn
+
+
+def ranked_diversityIndex_all_dimension(df):
+    diindex=[]
+    # print(df)
+    # print(df.info())
+    #print(df.describe())
+    # df_norm = df-df.mean()/(df.max()-df.min())
+    # print(df_norm.describe())
+    df_norm = df/df.max()
+    # print(df_norm.describe())
+    #print(df_norm.var())
+    dimension_pointers=[0,1,2,3,4]
+    for i in list(df.columns):
+        nw_list = df_norm[i].tolist()
+        diindex.append(diversityIndex(nw_list))
+    di_dictionary={dimension_pointers[i]: diindex[i] for i in range(len(diindex))}
+    return {k: v for k, v in sorted(di_dictionary.items(), key=lambda item: item[1])}
+
 class Tree:
     def __init__(
             self,
@@ -128,14 +172,14 @@ class Tree:
             self.logs=logs
             self.node_cutting_mechanism=node_cutting_mechanism
             self.parameter_ranges=parameter_ranges
-            self.root=Node(0,0,self.parameter_ranges,self.logs,0,-1)
+            self.root=Node(0,0,self.parameter_ranges,self.logs,0,-1,None)
             self.current_node = self.root
             self.nodes_to_cut = [self.root]
             self.depth = 0
             self.node_count = 1
 
-    def create_node(self, id,parent, ranges, logs, depth,attribute):
-        node = Node(id,parent,ranges,logs,depth,attribute)
+    def create_node(self, id,parent, ranges, logs, depth,attribute,cut_dimension):
+        node = Node(id,parent,ranges,logs,depth,attribute,cut_dimension)
         return node
 
     def get_depth(self):
@@ -146,6 +190,13 @@ class Tree:
 
     def is_leaf(self,node,cut_dimension):
         return (len(node.logs) <= self.leaf_threshold) or (same_values_on_dimensionX(node,cut_dimension))
+
+    def is_leaf_only_node(self,node):
+        if node.cut_dimension==None:
+            return False
+        else:
+            cut_dimension=node.cut_dimension
+            return (len(node.logs) <= self.leaf_threshold) or (same_values_on_dimensionX(node,cut_dimension))
 
     def is_finish(self):
         return len(self.nodes_to_cut) == 0
@@ -213,17 +264,113 @@ class Tree:
             # print("child_logs:",type(child_logs))
             # print(node.depth,type(node.depth))
             # if len(child_logs)==0:
-
-            child = self.create_node(self.node_count,node.id,child_ranges,
-                                     child_logs, node.depth + 1,cut_dimension)
-            edge=Edge(node,child,cut_dimension,[child_ranges[cut_dimension * 2],child_ranges[cut_dimension * 2+1]])
-            children.append(child)
-            children_edges.append(edge)
-            self.node_count += 1
+            if (len(child_logs)>0):    # this is to ensure no node is created with zero logs, reduce the number of nodes
+                child = self.create_node(self.node_count,node.id,child_ranges,
+                                         child_logs, node.depth + 1,cut_dimension,cut_dimension)
+                edge=Edge(node,child,cut_dimension,[child_ranges[cut_dimension * 2],child_ranges[cut_dimension * 2+1]])
+                children.append(child)
+                children_edges.append(edge)
+                self.node_count += 1
 
         node.edges=children_edges
         self.update_tree(node, children)
         return children
+
+    # def delete_no_log_nodes(self):
+    #     nodes = [self.root]
+    #     while len(nodes) != 0:
+    #         next_layer_nodes = []
+    #         for node in nodes:
+
+    def compute_result(self):
+
+        # memory space
+        # non-leaf: 2 + 16 + 4 * child num
+        # leaf: 2 + 16 * log num
+        # details:
+        #     header: 2 bytes
+        #     region boundary for non-leaf: 16 bytes
+        #     each child pointer: 4 bytes
+        #     each log: 16 bytes
+        result = {"bytes_per_log": 0, "memory_access": 0, \
+            "num_leaf_node": 0, "num_nonleaf_node": 0, "num_node": 0}
+        nodes = [self.root]
+        while len(nodes) != 0:
+            next_layer_nodes = []
+            for node in nodes:
+                next_layer_nodes.extend(node.children)
+
+                # compute bytes per rule
+                if self.is_leaf_only_node(node):
+                    result["bytes_per_log"] += 2 + 16 * len(node.logs)
+                    result["num_leaf_node"] += 1
+                else:
+                    result["bytes_per_log"] += 2 + 16 + 4 * len(node.children)
+                    result["num_nonleaf_node"] += 1
+
+            nodes = next_layer_nodes
+
+        result["memory_access"] = self._compute_memory_access(self.root)
+        result["bytes_per_log"] = result["bytes_per_log"] / len(self.logs)
+        result[
+            "num_node"] = result["num_leaf_node"] + result["num_nonleaf_node"]
+        return result
+
+    def _compute_memory_access(self, node):
+        if self.is_leaf_only_node(node) or not node.children:
+            return 1
+        # if node.is_partition():
+        #     return sum(self._compute_memory_access(n) for n in node.children)
+        else:
+            return 1 + max(
+                self._compute_memory_access(n) for n in node.children)
+
+    def get_stats(self):
+        widths = []
+        dim_stats = []
+        nodes = [self.root]
+        while len(nodes) != 0 and len(widths) < 30:
+            dim = [0] * 5
+            next_layer_nodes = []
+            for node in nodes:
+                next_layer_nodes.extend(node.children)
+                # if node.action and node.action[0] == "cut":
+                if node.cut_dimension==None:
+                    continue
+                dim[node.cut_dimension] += 1
+            widths.append(len(nodes))
+            dim_stats.append(dim)
+            nodes = next_layer_nodes
+        return {
+            "widths": widths,
+            "dim_stats": dim_stats,
+        }
+
+    def stats_str(self):
+        stats = self.get_stats()
+        out = "widths" + "," + ",".join(map(str, stats["widths"]))
+        out += "\n"
+        for i in range(len(stats["dim_stats"][0])):
+            out += "dim{}".format(i) + "," + ",".join(
+                str(d[i]) for d in stats["dim_stats"])
+            out += "\n"
+        return out
+
+    def print_stats(self):
+        print(self.stats_str())
+
+    def print_layers(self, layer_num=5):
+        nodes = [self.root]
+        for i in range(layer_num):
+            if len(nodes) == 0:
+                return
+
+            print("Layer", i)
+            next_layer_nodes = []
+            for node in nodes:
+                print(node)
+                next_layer_nodes.extend(node.children)
+            nodes = next_layer_nodes
 
     def __str__(self):
         result = ""
