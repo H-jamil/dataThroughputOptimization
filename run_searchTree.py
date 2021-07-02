@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T18:06:03-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-23T10:01:58-05:00
+# @Last modified time: 2021-06-24T12:05:18-05:00
 
 import argparse
 import os
@@ -52,19 +52,19 @@ if __name__ == "__main__":
     for i in requiredFields:
         ranges.append(fileData.dataset[i].min())
         ranges.append(fileData.dataset[i].max())
-    tree=Tree(fileData.logs,2,ranges,"DI")
+    tree=Tree(fileData.logs,16,ranges,"DI")
     cut_dimension=0
-    cut_num=4
+    cut_num=16
     nodes_to_operate=[]
     for i in tree.nodes_to_cut:
         nodes_to_operate.append(i.id)
-    print("nodes to cut:",nodes_to_operate)
+    # print("nodes to cut:",nodes_to_operate)
     while len(tree.nodes_to_cut)!=0:
         if not tree.is_leaf(tree.current_node,cut_dimension):
             print("cutting node %d now" %tree.current_node.id)
             ranked_cut_dimension=ranked_diversityIndex_all_dimension(tree.current_node.get_df())
             # print(ranked_cut_dimension)
-            print("ranked_cut_dimension=",ranked_cut_dimension)
+            # print("ranked_cut_dimension=",ranked_cut_dimension)
             cut_dimension=list(ranked_cut_dimension)[-1]
             print ("so cutting on %d"%cut_dimension)
             # print(cut_dimensions,type(cut_dimensions))
@@ -88,6 +88,28 @@ if __name__ == "__main__":
     print("##########################")
     print("Tree  stats:")
     tree.print_stats()
+    # print("##########################")
+    # print("##########################")
+    # for log in tree.logs:
+    #     print(log)
+    #     print("matches")
+    #     print(tree.match(log.values[0:5]))
+    #     print("##########################")
+    print("##########################")
+    tree.print_layers()
+    print("##########################")
+    preorderedNodesID=[]
+    preorderNodes=tree.preorderTraversal()
+    for node in preorderNodes:
+        preorderedNodesID.append(node.id)
+    print("preorderedNodesID",preorderedNodesID)
+    print("##########################")
+    # for log in tree.logs:
+    #     node=tree.search(tree.root,log,tree.root)
+    #     print(" %d log found in node %d"%(log.serialNo,node.id))
+        # print(tree.search(tree.root,log,tree.root))
+
+
     # for edge in tree.root.edges:
     #     print(edge)
     # nodes_to_operate=[]

@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T16:50:09-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-23T10:13:58-05:00
+# @Last modified time: 2021-06-24T12:26:32-05:00
 
 import math
 import random
@@ -10,12 +10,14 @@ import re
 import sys
 import pandas as pd
 from collections import Counter
+from collections import deque
 
 class Log:
     def __init__(self, serialNo, values):
         # each range is left inclusive and right exclusive, i.e., [left, right)
         self.serialNo = serialNo
         self.values = values
+        # print(self.values)
         self.ranges=[]
         for value in values:
             self.ranges.append(value)
@@ -24,9 +26,29 @@ class Log:
         self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism','Concurrency','Pipelining', 'Throughput']
 
     def is_intersect(self, dimension, left, right):
-        # return not (left >= self.ranges[dimension*2+1] or \
-        #     right <= self.ranges[dimension*2])
         return self.values[dimension]>=left and self.values[dimension]<=right
+
+    def is_intersect_multi_dimension(self, ranges):
+        for i in range(5):
+            if ranges[i*2] >= self.ranges[i*2+1] or \
+                    ranges[i*2+1] <= self.ranges[i*2]:
+                return False
+        return True
+
+    def matches(self, packet):
+        assert len(packet) == 5, packet
+        return self.is_intersect_multi_dimension([
+            packet[0] + 0,  # src ip
+            packet[0] + 1,
+            packet[1] + 0,  # dst ip
+            packet[1] + 1,
+            packet[2] + 0,  # src port
+            packet[2] + 1,
+            packet[3] + 0,  # dst port
+            packet[3] + 1,
+            packet[4] + 0,  # protocol
+            packet[4] + 1
+        ])
 
     def __str__(self):
         result = ""
@@ -87,9 +109,45 @@ class Node:
         self.logs_df.columns=self.names
         return self.logs_df
 
+
+    def match(self, packet):
+
+        if self.children:
+            for n in self.children:
+                if n.contains(packet):
+                    return n.match(packet)
+            return None
+        else:
+            for r in self.logs:
+                if r.matches(packet):
+                    return r
+
+    def is_intersect_multi_dimension(self, ranges):
+        for i in range(5):
+            if ranges[i*2] >= self.ranges[i*2+1] or \
+                    ranges[i*2+1] <= self.ranges[i*2]:
+                return False
+        return True
+
+    def contains(self, packet):
+        assert len(packet) == 5, packet
+        return self.is_intersect_multi_dimension([
+            packet[0] + 0,  # src ip
+            packet[0] + 1,
+            packet[1] + 0,  # dst ip
+            packet[1] + 1,
+            packet[2] + 0,  # src port
+            packet[2] + 1,
+            packet[3] + 0,  # dst port
+            packet[3] + 1,
+            packet[4] + 0,  # protocol
+            packet[4] + 1
+        ])
+
+
     def __str__(self):
-        result = "ID:%d\tparent:%d\tCut_attribute:%s\tDepth:%d\tRange:\t%s\nChildren: " % (
-            self.id,self.parent,str(self.cut_attribute),self.depth, str(self.ranges))
+        result = "ID:%d\tparent:%d\tCut_attribute:%s\tDepth:%d\tRange:\t%s\n#ofLogs:%d\nChildren: " % (
+            self.id,self.parent,str(self.cut_attribute),self.depth, str(self.ranges),len(self.logs))
         for child in self.children:
             result += str(child.id) + " "
         # result += "\nlogs:\n"
@@ -124,43 +182,33 @@ def same_values_on_dimensionX(node,cut_dimension):
 
 def diversityIndex(normalizedList):
     occuranceValue=0
-    # maxvalue=max(inputList)
-    # normalizedList=[x / maxvalue for x in inputList]
     normMaxvalue=max(normalizedList)
     normMinvalue=min(normalizedList)
     #res is a list without the duplicates
     res = [i for n, i in enumerate(normalizedList) if i not in normalizedList[:n]] # removing the duplicates
-    #print(normalizedList)
-    #print(res)
     d = Counter(normalizedList)
     for x in res:
-        #print('{} has occurred {} times'.format(x, d[x]))
-        #occuranceValue+=x/d[x]
         occuranceValue+=1/d[x]
-        # occuranceValue+=(-x/d[x])*(math.log((x/d[x]),2))
-
-    # print("occuranceValue", occuranceValue)
-
     diversityIn=(occuranceValue)*((normMaxvalue-normMinvalue))
     return diversityIn
 
 
 def ranked_diversityIndex_all_dimension(df):
     diindex=[]
-    # print(df)
-    # print(df.info())
-    #print(df.describe())
-    # df_norm = df-df.mean()/(df.max()-df.min())
-    # print(df_norm.describe())
     df_norm = df/df.max()
-    # print(df_norm.describe())
-    #print(df_norm.var())
     dimension_pointers=[0,1,2,3,4]
     for i in list(df.columns):
         nw_list = df_norm[i].tolist()
         diindex.append(diversityIndex(nw_list))
     di_dictionary={dimension_pointers[i]: diindex[i] for i in range(len(diindex))}
     return {k: v for k, v in sorted(di_dictionary.items(), key=lambda item: item[1])}
+
+def log_value_in_node_range(search_value,attr_value_range):
+    if attr_value_range[0]<=search_value and attr_value_range[1]>=search_value:
+        # print("Match found")
+        return True
+    else:
+        return False
 
 class Tree:
     def __init__(
@@ -177,6 +225,45 @@ class Tree:
             self.nodes_to_cut = [self.root]
             self.depth = 0
             self.node_count = 1
+
+    def preorderTraversal(self):
+        Stack = deque([])
+        # 'Preorder'-> contains all the
+        # visited nodes.
+        Preorder =[]
+        Preorder.append(self.root)
+        Stack.append(self.root)
+        while len(Stack)>0:
+            # 'Flag' checks whether all the child
+            # nodes have been visited.
+            flag = 0
+            # CASE 1- If Top of the stack is a leaf
+            # node then remove it from the stack:
+            if len((Stack[len(Stack)-1]).children)== 0:
+                X = Stack.pop()
+                # CASE 2- If Top of the stack is
+                # Parent with children:
+            else:
+                Par = Stack[len(Stack)-1]
+            # a)As soon as an unvisited child is
+            # found(left to right sequence),
+            # Push it to Stack and Store it in
+            # Auxillary List(Marked Visited)
+            # Start Again from Case-1, to explore
+            # this newly visited child
+            for i in range(0, len(Par.children)):
+                if Par.children[i] not in Preorder:
+                    flag = 1
+                    Stack.append(Par.children[i])
+                    Preorder.append(Par.children[i])
+                    break;
+                    # b)If all Child nodes from left to right
+                    # of a Parent have been visited
+                    # then remove the parent from the stack.
+            if flag == 0:
+                Stack.pop()
+
+        return Preorder
 
     def create_node(self, id,parent, ranges, logs, depth,attribute,cut_dimension):
         node = Node(id,parent,ranges,logs,depth,attribute,cut_dimension)
@@ -209,16 +296,10 @@ class Tree:
             self.current_node = None
         return self.current_node
 
+    def match(self, packet):
+        return self.root.match(packet)
+
     def update_tree(self, node, children):
-        # if self.refinements["node_merging"]:
-        #     children = self.refinement_node_merging(children)
-        #
-        # if self.refinements["equi_dense"]:
-        #     children = self.refinement_equi_dense(children)
-        #
-        # if (self.refinements["region_compaction"]):
-        #     for child in children:
-        #         self.refinement_region_compaction(child)
         node.children.extend(children)
         children.reverse()
         self.nodes_to_cut.pop()
@@ -227,22 +308,14 @@ class Tree:
         # print("current_node %d"%self.current_node.id)
 
     def cut_node(self, node, cut_dimension, cut_num):
-        # self.node_count += 1
         self.depth = max(self.depth, node.depth + 1)
-        # node.action = ("cut", cut_dimension, cut_num)
         range_left = node.ranges[cut_dimension * 2]
         range_right = node.ranges[cut_dimension * 2 + 1]
         range_per_cut = math.ceil((range_right - range_left) / cut_num)
         child_cut_dimension_ranges=get_the_non_overlapping_ranges(range_left,range_right,range_per_cut,cut_num)
-        # print(range_left,range_right,range_per_cut)
         children = []
         children_edges=[]
-        # if self.is_leaf(node):
-        #     print("true")
-        #     self.nodes_to_cut.pop()
-        #     self.current_node = self.nodes_to_cut[-1]
-        #     print("current_node %d"%self.current_node.id)
-        #     return None
+
         assert cut_num > 0, (cut_dimension, cut_num)
         for i in range(cut_num):
             child_ranges = list(node.ranges)
@@ -254,16 +327,7 @@ class Tree:
                                      child_ranges[cut_dimension * 2],
                                      child_ranges[cut_dimension * 2 + 1]):
                     child_logs.append(log)
-                    # print("True\n")
 
-            # for log in child_logs:
-            #     print(log)
-            # print(self.node_count, type(self.node_count))
-            # print(node.id,type (node.id))
-            # print(child_ranges,type(child_ranges))
-            # print("child_logs:",type(child_logs))
-            # print(node.depth,type(node.depth))
-            # if len(child_logs)==0:
             if (len(child_logs)>0):    # this is to ensure no node is created with zero logs, reduce the number of nodes
                 child = self.create_node(self.node_count,node.id,child_ranges,
                                          child_logs, node.depth + 1,cut_dimension,cut_dimension)
@@ -276,11 +340,6 @@ class Tree:
         self.update_tree(node, children)
         return children
 
-    # def delete_no_log_nodes(self):
-    #     nodes = [self.root]
-    #     while len(nodes) != 0:
-    #         next_layer_nodes = []
-    #         for node in nodes:
 
     def compute_result(self):
 
@@ -372,22 +431,34 @@ class Tree:
                 next_layer_nodes.extend(node.children)
             nodes = next_layer_nodes
 
+    def search(self,node,log,result_node):
+        return_node=result_node
+        if not self.is_leaf_only_node(node):
+            for edge in node.edges:
+                search_value=log.values[edge.attr_selected]
+                if log_value_in_node_range(search_value,edge.attr_value_range):
+                    return_node=edge.child_node
+                    break
+            return self.search(return_node,log,return_node)
+        else:
+            return return_node
+
     def __str__(self):
         result = ""
         nodes = [self.root]
         while len(nodes) != 0:
             next_layer_nodes = []
             for node in nodes:
-                result += "ID:%d\tparent:%d\tCut_attribute:%s\tDepth:%d\tRange:%s\t#ofLogs:%d\t\nChildren: [" % (
+                result += "ID:%d\tparent:%d\tCut_attribute:%s\tDepth:%d\tRange:%s\n#ofLogs:%d\t\nChildren: [" % (
                     node.id,node.parent,str(node.cut_attribute),node.depth, str(node.ranges),len(node.logs))
                 # result += "%d; %s; %s; [" % (node.id, str(node.action),
                 #                              str(node.ranges))
                 for child in node.children:
                     result += str(child.id) + " "
                 result += "]\n"
-                result += "\nlogs:\n"
-                for log in node.logs:
-                    result += str(log) + "\n"
+                # result += "\nlogs:\n"
+                # for log in node.logs:
+                #     result += str(log) + "\n"
                 next_layer_nodes.extend(node.children)
             nodes = next_layer_nodes
         return result
