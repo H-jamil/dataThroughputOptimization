@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T16:50:09-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-06-24T12:26:32-05:00
+# @Last modified time: 2021-07-02T14:56:45-05:00
 
 import math
 import random
@@ -179,6 +179,21 @@ def same_values_on_dimensionX(node,cut_dimension):
     else:
         return True
 
+def standardDeviation(normalizedList):
+    mean = sum(normalizedList) / len(normalizedList)
+    variance = sum([((x - mean) ** 2) for x in normalizedList]) / len(normalizedList)
+    sd = variance ** 0.5
+    return sd
+
+def ranked_SD_all_dimension(df):
+    sdindex=[]
+    df_norm = df/df.max()
+    dimension_pointers=[0,1,2,3,4]
+    for i in list(df.columns):
+        nw_list = df_norm[i].tolist()
+        sdindex.append(standardDeviation(nw_list))
+    sd_dictionary={dimension_pointers[i]: sdindex[i] for i in range(len(sdindex))}
+    return {k: v for k, v in sorted(sd_dictionary.items(), key=lambda item: item[1])}
 
 def diversityIndex(normalizedList):
     occuranceValue=0
@@ -240,7 +255,7 @@ class Tree:
             # CASE 1- If Top of the stack is a leaf
             # node then remove it from the stack:
             if len((Stack[len(Stack)-1]).children)== 0:
-                X = Stack.pop()
+                Par = Stack.pop()
                 # CASE 2- If Top of the stack is
                 # Parent with children:
             else:
