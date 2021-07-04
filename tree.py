@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T16:50:09-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-07-02T14:56:45-05:00
+# @Last modified time: 2021-07-04T14:44:57-05:00
 
 import math
 import random
@@ -109,6 +109,14 @@ class Node:
         self.logs_df.columns=self.names
         return self.logs_df
 
+    def get_max_throughput_log(self):
+        throughput_log_values=[]
+        for l in self.logs:
+            throughput_log_values.append(l.values[8])
+        max_throughput_log_values=max(throughput_log_values)
+        for l in self.logs:
+            if l.values[8]==max_throughput_log_values:
+                return l
 
     def match(self, packet):
 

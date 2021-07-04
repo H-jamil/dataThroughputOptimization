@@ -1,7 +1,7 @@
 # @Author: jamil
 # @Date:   2021-06-11T18:06:03-05:00
 # @Last modified by:   jamil
-# @Last modified time: 2021-07-02T22:59:01-05:00
+# @Last modified time: 2021-07-04T15:06:00-05:00
 
 import argparse
 import os
@@ -59,9 +59,9 @@ if __name__ == "__main__":
     cut_dimension=0
     cut_num=4
     nodes_to_operate=[]
-    for i in tree.nodes_to_cut:
-        nodes_to_operate.append(i.id)
-    # print("nodes to cut:",nodes_to_operate)
+    # for i in tree.nodes_to_cut:
+    #     nodes_to_operate.append(i.id)
+    # # print("nodes to cut:",nodes_to_operate)
     while len(tree.nodes_to_cut)!=0:
         if not tree.is_leaf(tree.current_node,cut_dimension):
             print("cutting node %d now" %tree.current_node.id)
@@ -85,16 +85,16 @@ if __name__ == "__main__":
             for i in tree.nodes_to_cut:
                 nodes_to_operate.append(i.id)
             print("nodes to cut:",nodes_to_operate)
-    
+
 
     #################################################
     #saving the DI tree in pkl format
     #################################################
-    with open("DI_tree.pkl", "wb") as f:
-        pickle.dump(tree, f)
-
-    with open("DI_tree.pkl", "rb") as f:
-        tree = pickle.load(f)
+    # with open("DI_tree.pkl", "wb") as f:
+    #     pickle.dump(tree, f)
+    #
+    # with open("DI_tree.pkl", "rb") as f:
+    #     tree = pickle.load(f)
     print("##########################")
     print("DI tree")
     print("##########################")
@@ -113,85 +113,89 @@ if __name__ == "__main__":
         preorderedNodesID.append(node.id)
     print("preorderedNodesID",preorderedNodesID)
     print("##########################")
-    # for log in tree.logs:
-    #     node=tree.search(tree.root,log,tree.root)
-    #     print(" %d log found in node %d"%(log.serialNo,node.id))
-    #     print(tree.search(tree.root,log,tree.root))
+    for log in tree.logs:
+        node=tree.search(tree.root,log,tree.root)
+        print(" %d log found in node %d"%(log.serialNo,node.id))
+        max_log=node.get_max_throughput_log()
+        print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d"%(max_log.values[8],max_log.values[5],max_log.values[6],max_log.values[7]))
 
 
-    #################################################
-    #Testing for standard standardDeviation
-    #################################################
 
-    tree=Tree(fileData.logs,leaf_threshold,ranges,"SD")
-    cut_dimension=0
-    cut_num=4
-    nodes_to_operate=[]
-    for i in tree.nodes_to_cut:
-        nodes_to_operate.append(i.id)
-    # print("nodes to cut:",nodes_to_operate)
-    while len(tree.nodes_to_cut)!=0:
-        if not tree.is_leaf(tree.current_node,cut_dimension):
-            print("cutting node %d now" %tree.current_node.id)
-            ranked_cut_dimension=ranked_SD_all_dimension(tree.current_node.get_df())
-            # print(ranked_cut_dimension)
-            print("ranked_cut_dimension=",ranked_cut_dimension)
-            cut_dimension=list(ranked_cut_dimension)[-1]
-            print ("so cutting on %d"%cut_dimension)
-            # print(cut_dimensions,type(cut_dimensions))
-            tree.cut_node(tree.current_node,cut_dimension,cut_num)
-            for edge in tree.current_node.edges:
-                print(edge)
-            nodes_to_operate=[]
-            for i in tree.nodes_to_cut:
-                nodes_to_operate.append(i.id)
-            print("nodes to cut:",nodes_to_operate)
-        else:
-            print("escaping node %d as a leaf node"%tree.current_node.id)
-            tree.get_next_node()
-            nodes_to_operate=[]
-            for i in tree.nodes_to_cut:
-                nodes_to_operate.append(i.id)
-            print("nodes to cut:",nodes_to_operate)
 
-    #################################################
-    #saving the SD tree in pkl format
-    #################################################
-    with open("SD_tree.pkl", "wb") as f:
-        pickle.dump(tree, f)
-    with open("SD_tree.pkl", "rb") as f:
-        tree = pickle.load(f)
-    print("##########################")
-    print("SD tree")
-    print("##########################")
-    print(tree)
-    print("##########################")
-    print("Tree Results:",tree.compute_result())
-    print("##########################")
-    print("Tree  stats:")
-    tree.print_stats()
-    print("##########################")
-    tree.print_layers()
-    print("##########################")
-    preorderedNodesID=[]
-    preorderNodes=tree.preorderTraversal()
-    for node in preorderNodes:
-        preorderedNodesID.append(node.id)
-    print("preorderedNodesID",preorderedNodesID)
-    print("##########################")
 
-    # for edge in tree.root.edges:
-    #     print(edge)
+    # #################################################
+    # #Testing for standard standardDeviation
+    # #################################################
+    #
+    # tree=Tree(fileData.logs,leaf_threshold,ranges,"SD")
+    # cut_dimension=0
+    # cut_num=4
     # nodes_to_operate=[]
-    # for i in tree.nodes_to_cut:
-    #     nodes_to_operate.append(i.id)
-    # print("nodes to cut:",nodes_to_operate)
-    # # print("current_node %d"%tree.current_node.id)
-    # tree.cut_node(tree.current_node,0,2)
-    # nodes_to_operate=[]
-    # for i in tree.nodes_to_cut:
-    #     nodes_to_operate.append(i.id)
-    # print("nodes to cut:",nodes_to_operate)
-    # print("current_node %d"%tree.current_node.id)
+    # # for i in tree.nodes_to_cut:
+    # #     nodes_to_operate.append(i.id)
+    # # # print("nodes to cut:",nodes_to_operate)
+    # while len(tree.nodes_to_cut)!=0:
+    #     if not tree.is_leaf(tree.current_node,cut_dimension):
+    #         print("cutting node %d now" %tree.current_node.id)
+    #         ranked_cut_dimension=ranked_SD_all_dimension(tree.current_node.get_df())
+    #         # print(ranked_cut_dimension)
+    #         print("ranked_cut_dimension=",ranked_cut_dimension)
+    #         cut_dimension=list(ranked_cut_dimension)[-1]
+    #         print ("so cutting on %d"%cut_dimension)
+    #         # print(cut_dimensions,type(cut_dimensions))
+    #         tree.cut_node(tree.current_node,cut_dimension,cut_num)
+    #         for edge in tree.current_node.edges:
+    #             print(edge)
+    #         nodes_to_operate=[]
+    #         for i in tree.nodes_to_cut:
+    #             nodes_to_operate.append(i.id)
+    #         print("nodes to cut:",nodes_to_operate)
+    #     else:
+    #         print("escaping node %d as a leaf node"%tree.current_node.id)
+    #         tree.get_next_node()
+    #         nodes_to_operate=[]
+    #         for i in tree.nodes_to_cut:
+    #             nodes_to_operate.append(i.id)
+    #         print("nodes to cut:",nodes_to_operate)
+    #
+    # #################################################
+    # #saving the SD tree in pkl format
+    # #################################################
+    # # with open("SD_tree.pkl", "wb") as f:
+    # #     pickle.dump(tree, f)
+    # # with open("SD_tree.pkl", "rb") as f:
+    # #     tree = pickle.load(f)
+    # print("##########################")
+    # print("SD tree")
+    # print("##########################")
     # print(tree)
-    # print(root.logs_df)
+    # print("##########################")
+    # print("Tree Results:",tree.compute_result())
+    # print("##########################")
+    # print("Tree  stats:")
+    # tree.print_stats()
+    # print("##########################")
+    # tree.print_layers()
+    # print("##########################")
+    # preorderedNodesID=[]
+    # preorderNodes=tree.preorderTraversal()
+    # for node in preorderNodes:
+    #     preorderedNodesID.append(node.id)
+    # print("preorderedNodesID",preorderedNodesID)
+    # print("##########################")
+    #
+    # # for edge in tree.root.edges:
+    # #     print(edge)
+    # # nodes_to_operate=[]
+    # # for i in tree.nodes_to_cut:
+    # #     nodes_to_operate.append(i.id)
+    # # print("nodes to cut:",nodes_to_operate)
+    # # # print("current_node %d"%tree.current_node.id)
+    # # tree.cut_node(tree.current_node,0,2)
+    # # nodes_to_operate=[]
+    # # for i in tree.nodes_to_cut:
+    # #     nodes_to_operate.append(i.id)
+    # # print("nodes to cut:",nodes_to_operate)
+    # # print("current_node %d"%tree.current_node.id)
+    # # print(tree)
+    # # print(root.logs_df)
