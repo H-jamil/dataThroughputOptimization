@@ -1,3 +1,9 @@
+##
+# @author Jamil Hasibul <mdhasibul.jamil@siu.edu>
+ # @file Description
+ # @desc Created on 2021-07-27 11:59:33 pm
+ # @copyright
+ #
 # @Author: jamil
 # @Date:   2021-06-11T18:06:03-05:00
 # @Last modified by:   jamil
@@ -15,7 +21,9 @@ import matplotlib.pyplot as plt
 from tree import *
 import time
 import pickle
-
+import math
+import sys
+sys.setrecursionlimit(10000)
 
 
 parser = argparse.ArgumentParser()
@@ -30,6 +38,7 @@ class ReadFile:
     def __init__(self,
                 dataset_file_location,requiredFields):
         self.logs=[]
+        self.test_logs=[]
         #dataset_file_location is a "list" of considered dataset files
         self.dataset=load_dataset_from_file(dataset_file_location)
         self.requiredData=extractRequiredColumn(self.dataset,requiredFields)
@@ -37,6 +46,30 @@ class ReadFile:
         for index, row in self.requiredData.iterrows():
             self.logs.append(
             Log(index,[row['FileSize'], row['FileCount'],row['Bandwidth'],row['RTT'],row['BufferSize'],row['Parallelism'],row['Concurrency'],row['Pipelining'],row['Throughput']]))
+
+        self.grouped_df=self.requiredData.groupby(['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize'])
+        # print(type(self.grouped_df))
+        self.map_for_tuple_to_throughput=dict()
+        for key,item in self.grouped_df:
+          a_group=self.grouped_df.get_group(key)
+          # print(a_group, type(a_group),'\n')
+          group_max_throughput=a_group['Throughput'].max()
+          self.map_for_tuple_to_throughput[key]=group_max_throughput
+          number_of_rows=a_group.shape[0]
+          selected_no_test_rows=math.ceil(number_of_rows*0.3)  #30% is test data
+          a_group_test=a_group.sample(n=selected_no_test_rows)
+          # print(a_group_test, '\n')
+          for index, row in a_group_test.iterrows():
+              self.test_logs.append(Log(index,[row['FileSize'], row['FileCount'],row['Bandwidth'],row['RTT'],row['BufferSize'],row['Parallelism'],row['Concurrency'],row['Pipelining'],row['Throughput']]))
+
+    def return_map_for_tuple_to_throughput(self):
+      return self.map_for_tuple_to_throughput
+
+    def return_test_logs(self):
+      return self.test_logs
+
+
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -50,14 +83,17 @@ if __name__ == "__main__":
    # fileData is an object of ReadFile class
 
     fileData=ReadFile(args.dataset,requiredFields)
+    optimal_throughput_dictionary=fileData.return_map_for_tuple_to_throughput()
+    test_logs=fileData.return_test_logs()
+    print(len(test_logs))
     ranges=[]
-    leaf_threshold=2
+    leaf_threshold=100
     for i in requiredFields:
         ranges.append(fileData.dataset[i].min())
         ranges.append(fileData.dataset[i].max())
     tree=Tree(fileData.logs,leaf_threshold,ranges,"DI")
     cut_dimension=0
-    cut_num=4
+    cut_num=8
     nodes_to_operate=[]
     # for i in tree.nodes_to_cut:
     #     nodes_to_operate.append(i.id)
@@ -87,14 +123,15 @@ if __name__ == "__main__":
             print("nodes to cut:",nodes_to_operate)
 
 
-    #################################################
+    ################################################
     #saving the DI tree in pkl format
-    #################################################
-    # with open("DI_tree.pkl", "wb") as f:
-    #     pickle.dump(tree, f)
-    #
-    # with open("DI_tree.pkl", "rb") as f:
-    #     tree = pickle.load(f)
+    ################################################
+    with open("DI_tree.pkl", "wb") as f:
+        pickle.dump(tree, f)
+
+    with open("DI_tree.pkl", "rb") as f:
+        tree = pickle.load(f)
+
     print("##########################")
     print("DI tree")
     print("##########################")
@@ -113,11 +150,56 @@ if __name__ == "__main__":
         preorderedNodesID.append(node.id)
     print("preorderedNodesID",preorderedNodesID)
     print("##########################")
-    for log in tree.logs:
+    print("##########################")
+    # print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+    print("Tree Results:",tree.compute_result())
+    print("##########################")
+    print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+    print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+    print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+    print("##########################")
+    MSE_DI_list=[]
+    test_logs=test_logs[0:700]
+    for log in test_logs:
         node=tree.search(tree.root,log,tree.root)
         print(" %d log found in node %d"%(log.serialNo,node.id))
         max_log=node.get_max_throughput_log()
+        optimal_throughput=optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])]
+        cluster_max_throughput=max_log.values[8]
         print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d"%(max_log.values[8],max_log.values[5],max_log.values[6],max_log.values[7]))
+        print("%d throughput is optimal"%optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])])
+        if optimal_throughput > cluster_max_throughput:
+            MSE_DI_list.append((optimal_throughput-cluster_max_throughput))
+        else:
+            MSE_DI_list.append(0)
+    print(MSE_DI_list)
+    print("##########################")
+    print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+    print("Tree Results:",tree.compute_result())
+    print("##########################")
+    print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+    print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+    print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+    print("##########################")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
