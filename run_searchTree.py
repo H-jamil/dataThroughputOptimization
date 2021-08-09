@@ -69,6 +69,203 @@ class ReadFile:
       return self.test_logs
 
 
+def tree_building_with_metric_result_generation(tree,metric,test_logs,optimal_throughput_dictionary):
+    if metric=="DI":
+        cut_dimension=0
+        cut_num=8
+        nodes_to_operate=[]
+        # for i in tree.nodes_to_cut:
+        #     nodes_to_operate.append(i.id)
+        # # print("nodes to cut:",nodes_to_operate)
+        while len(tree.nodes_to_cut)!=0:
+            if not tree.is_leaf(tree.current_node,cut_dimension):
+                print("cutting node %d now" %tree.current_node.id)
+                ranked_cut_dimension=ranked_diversityIndex_all_dimension(tree.current_node.get_df())
+                # print(ranked_cut_dimension)
+                print("ranked_cut_dimension=",ranked_cut_dimension)
+                cut_dimension=list(ranked_cut_dimension)[-1]
+                print ("so cutting on %d"%cut_dimension)
+                # print(cut_dimensions,type(cut_dimensions))
+                tree.cut_node(tree.current_node,cut_dimension,cut_num)
+                for edge in tree.current_node.edges:
+                    print(edge)
+                nodes_to_operate=[]
+                for i in tree.nodes_to_cut:
+                    nodes_to_operate.append(i.id)
+                print("nodes to cut:",nodes_to_operate)
+            else:
+                print("escaping node %d as a leaf node"%tree.current_node.id)
+                tree.get_next_node()
+                nodes_to_operate=[]
+                for i in tree.nodes_to_cut:
+                    nodes_to_operate.append(i.id)
+                print("nodes to cut:",nodes_to_operate)
+
+
+        ################################################
+        #saving the DI tree in pkl format
+        ################################################
+        with open("DI_tree.pkl", "wb") as f:
+            pickle.dump(tree, f)
+
+        with open("DI_tree.pkl", "rb") as f:
+            tree = pickle.load(f)
+
+        print("##########################")
+        print("DI tree")
+        print("##########################")
+        print(tree)
+        print("##########################")
+        print("Tree Results:",tree.compute_result())
+        print("##########################")
+        print("Tree  stats:")
+        tree.print_stats()
+        print("##########################")
+        tree.print_layers()
+        print("##########################")
+        preorderedNodesID=[]
+        preorderNodes=tree.preorderTraversal()
+        for node in preorderNodes:
+            preorderedNodesID.append(node.id)
+        print("preorderedNodesID",preorderedNodesID)
+        print("##########################")
+        print("##########################")
+        # print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+        print("Tree Results:",tree.compute_result())
+        print("##########################")
+        print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+        print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+        print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+        print("##########################")
+        MSE_DI_list=[]
+        max_log_DI_list=[]
+        optimal_throughput_DI_list=[]
+        test_logs=test_logs[0:300]
+        for log in test_logs:
+            node=tree.search(tree.root,log,tree.root)
+            print(" %d log found in node %d"%(log.serialNo,node.id))
+            max_log=node.get_max_throughput_log()
+            max_log_DI_list.append(max_log)
+            optimal_throughput=optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])]
+            optimal_throughput_DI_list.append(optimal_throughput)
+            cluster_max_throughput=max_log.values[8]
+            print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d"%(max_log.values[8],max_log.values[5],max_log.values[6],max_log.values[7]))
+            print("%d throughput is optimal"%optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])])
+            if optimal_throughput > cluster_max_throughput:
+                MSE_DI_list.append((optimal_throughput-cluster_max_throughput))
+            else:
+                MSE_DI_list.append(0)
+        print(MSE_DI_list)
+        print("##########################")
+        print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+        print("Tree Results:",tree.compute_result())
+        print("##########################")
+        print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+        print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+        print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+        print("##########################")
+        return max_log_DI_list,optimal_throughput_DI_list
+
+    elif metric=="SD":
+        cut_dimension=0
+        cut_num=8
+        nodes_to_operate=[]
+        # for i in tree.nodes_tos_cut:
+        #     nodes_to_operate.append(i.id)
+        # # print("nodes to cut:",nodes_to_operate)
+        while len(tree.nodes_to_cut)!=0:
+            if not tree.is_leaf(tree.current_node,cut_dimension):
+                print("cutting node %d now" %tree.current_node.id)
+                ranked_cut_dimension=ranked_SD_all_dimension(tree.current_node.get_df())
+                # print(ranked_cut_dimension)
+                print("ranked_cut_dimension=",ranked_cut_dimension)
+                cut_dimension=list(ranked_cut_dimension)[-1]
+                print ("so cutting on %d"%cut_dimension)
+                # print(cut_dimensions,type(cut_dimensions))
+                tree.cut_node(tree.current_node,cut_dimension,cut_num)
+                for edge in tree.current_node.edges:
+                    print(edge)
+                nodes_to_operate=[]
+                for i in tree.nodes_to_cut:
+                    nodes_to_operate.append(i.id)
+                print("nodes to cut:",nodes_to_operate)
+            else:
+                print("escaping node %d as a leaf node"%tree.current_node.id)
+                tree.get_next_node()
+                nodes_to_operate=[]
+                for i in tree.nodes_to_cut:
+                    nodes_to_operate.append(i.id)
+                print("nodes to cut:",nodes_to_operate)
+
+
+        ################################################
+        #saving the SD tree in pkl format
+        ################################################
+        with open("SD_tree.pkl", "wb") as f:
+            pickle.dump(tree, f)
+
+        with open("SD_tree.pkl", "rb") as f:
+            tree = pickle.load(f)
+
+        print("##########################")
+        print("SD tree")
+        print("##########################")
+        print(tree)
+        print("##########################")
+        print("Tree Results:",tree.compute_result())
+        print("##########################")
+        print("Tree  stats:")
+        tree.print_stats()
+        print("##########################")
+        tree.print_layers()
+        print("##########################")
+        preorderedNodesID=[]
+        preorderNodes=tree.preorderTraversal()
+        for node in preorderNodes:
+            preorderedNodesID.append(node.id)
+        print("preorderedNodesID",preorderedNodesID)
+        print("##########################")
+        print("##########################")
+        # print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+        print("Tree Results:",tree.compute_result())
+        print("##########################")
+        print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+        print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+        print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+        print("##########################")
+        MSE_SD_list=[]
+        max_log_SD_list=[]
+        optimal_throughput_SD_list=[]
+        test_logs=test_logs[0:300]
+        # for i in test_logs:
+        #     print(i)
+        for log in test_logs:
+            node=tree.search(tree.root,log,tree.root)
+            # print(log)
+            print(" %d log found in node %d"%(log.serialNo,node.id))
+            max_log=node.get_max_throughput_log()
+            max_log_SD_list.append(max_log)
+            optimal_throughput=optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])]
+            optimal_throughput_SD_list.append(optimal_throughput)
+            cluster_max_throughput=max_log.values[8]
+            print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d"%(max_log.values[8],max_log.values[5],max_log.values[6],max_log.values[7]))
+            print("%d throughput is optimal"%optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])])
+            if optimal_throughput > cluster_max_throughput:
+                MSE_SD_list.append((optimal_throughput-cluster_max_throughput))
+            else:
+                MSE_SD_list.append(0)
+        print(MSE_SD_list)
+        print("##########################")
+        print("average error for all the test log following SD scheme is =",sum(MSE_SD_list)/len(MSE_SD_list))
+        print("Tree Results:",tree.compute_result())
+        print("##########################")
+        print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+        print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+        print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+        print("##########################")
+        return max_log_SD_list,optimal_throughput_SD_list
+
+
 
 
 if __name__ == "__main__":
@@ -81,7 +278,7 @@ if __name__ == "__main__":
    #  dropFeatureList=['Parallelism', 'Concurrency',
    # 'Pipelining']
    # fileData is an object of ReadFile class
-
+    cut_num=8
     fileData=ReadFile(args.dataset,requiredFields)
     optimal_throughput_dictionary=fileData.return_map_for_tuple_to_throughput()
     test_logs=fileData.return_test_logs()
@@ -92,95 +289,132 @@ if __name__ == "__main__":
         ranges.append(fileData.dataset[i].min())
         ranges.append(fileData.dataset[i].max())
     tree=Tree(fileData.logs,leaf_threshold,ranges,"DI")
-    cut_dimension=0
-    cut_num=8
-    nodes_to_operate=[]
-    # for i in tree.nodes_to_cut:
-    #     nodes_to_operate.append(i.id)
-    # # print("nodes to cut:",nodes_to_operate)
-    while len(tree.nodes_to_cut)!=0:
-        if not tree.is_leaf(tree.current_node,cut_dimension):
-            print("cutting node %d now" %tree.current_node.id)
-            ranked_cut_dimension=ranked_diversityIndex_all_dimension(tree.current_node.get_df())
-            # print(ranked_cut_dimension)
-            print("ranked_cut_dimension=",ranked_cut_dimension)
-            cut_dimension=list(ranked_cut_dimension)[-1]
-            print ("so cutting on %d"%cut_dimension)
-            # print(cut_dimensions,type(cut_dimensions))
-            tree.cut_node(tree.current_node,cut_dimension,cut_num)
-            for edge in tree.current_node.edges:
-                print(edge)
-            nodes_to_operate=[]
-            for i in tree.nodes_to_cut:
-                nodes_to_operate.append(i.id)
-            print("nodes to cut:",nodes_to_operate)
-        else:
-            print("escaping node %d as a leaf node"%tree.current_node.id)
-            tree.get_next_node()
-            nodes_to_operate=[]
-            for i in tree.nodes_to_cut:
-                nodes_to_operate.append(i.id)
-            print("nodes to cut:",nodes_to_operate)
+    max_log_DI_list,optimal_throughput_DI_list=tree_building_with_metric_result_generation(tree,"DI",test_logs,optimal_throughput_dictionary)
+    tree2=Tree(fileData.logs,leaf_threshold,ranges,"SD")
+    max_log_SD_list,optimal_throughput_SD_list=tree_building_with_metric_result_generation(tree2,"SD",test_logs,optimal_throughput_dictionary)
 
-
-    ################################################
-    #saving the DI tree in pkl format
-    ################################################
-    with open("DI_tree.pkl", "wb") as f:
-        pickle.dump(tree, f)
-
-    with open("DI_tree.pkl", "rb") as f:
-        tree = pickle.load(f)
-
-    print("##########################")
-    print("DI tree")
-    print("##########################")
-    print(tree)
-    print("##########################")
-    print("Tree Results:",tree.compute_result())
-    print("##########################")
-    print("Tree  stats:")
-    tree.print_stats()
-    print("##########################")
-    tree.print_layers()
-    print("##########################")
-    preorderedNodesID=[]
-    preorderNodes=tree.preorderTraversal()
-    for node in preorderNodes:
-        preorderedNodesID.append(node.id)
-    print("preorderedNodesID",preorderedNodesID)
-    print("##########################")
-    print("##########################")
-    # print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
-    print("Tree Results:",tree.compute_result())
-    print("##########################")
-    print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
-    print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
-    print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
-    print("##########################")
-    MSE_DI_list=[]
-    test_logs=test_logs[0:700]
+    MSE_DI_SD_list=[]
+    # max_log_DI_list=[]
+    # optimal_throughput_DI_list=[]
+    test_logs=test_logs[0:300]
     for log in test_logs:
-        node=tree.search(tree.root,log,tree.root)
-        print(" %d log found in node %d"%(log.serialNo,node.id))
-        max_log=node.get_max_throughput_log()
+        node_di=tree.search(tree.root,log,tree.root)
+        node_sd=tree2.search(tree2.root,log,tree2.root)
+        print(" %d log found in node %d in DI tree and node %d in SD tree"%(log.serialNo,node_di.id,node_sd.id))
+        max_log_di=node_di.get_max_throughput_log()
+        max_log_sd=node_sd.get_max_throughput_log()
+        # max_log_DI_list.append(max_log)
         optimal_throughput=optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])]
-        cluster_max_throughput=max_log.values[8]
-        print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d"%(max_log.values[8],max_log.values[5],max_log.values[6],max_log.values[7]))
+        # optimal_throughput_DI_list.append(optimal_throughput)
+        cluster_max_throughput=(max_log_di.values[8]+max_log_sd.values[8])/2
+        print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d for DI tree"%(max_log_di.values[8],max_log_di.values[5],max_log_di.values[6],max_log_di.values[7]))
+        print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d for SD tree"%(max_log_sd.values[8],max_log_sd.values[5],max_log_sd.values[6],max_log_sd.values[7]))
+        print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d for DI+SD tree"%(round((max_log_sd.values[8]+max_log_sd.values[8])/2),round((max_log_sd.values[5]+max_log_sd.values[5])/2),round((max_log_sd.values[6]+max_log_sd.values[6])/2),round((max_log_sd.values[7]+max_log_sd.values[7])/2)))
         print("%d throughput is optimal"%optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])])
         if optimal_throughput > cluster_max_throughput:
-            MSE_DI_list.append((optimal_throughput-cluster_max_throughput))
+            MSE_DI_SD_list.append((optimal_throughput-cluster_max_throughput))
         else:
-            MSE_DI_list.append(0)
-    print(MSE_DI_list)
+            MSE_DI_SD_list.append(0)
+    print(MSE_DI_SD_list)
     print("##########################")
-    print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
-    print("Tree Results:",tree.compute_result())
+    print("average error for all the test log following SD+DI scheme is =",sum(MSE_DI_SD_list)/len(MSE_DI_SD_list))
+    print("Tree DI Results:",tree.compute_result())
+    print("Tree SD Results:",tree2.compute_result())
     print("##########################")
     print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
     print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
     print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
     print("##########################")
+
+    # cut_dimension=0
+    # cut_num=8
+    # nodes_to_operate=[]
+    # # for i in tree.nodes_to_cut:
+    # #     nodes_to_operate.append(i.id)
+    # # # print("nodes to cut:",nodes_to_operate)
+    # while len(tree.nodes_to_cut)!=0:
+    #     if not tree.is_leaf(tree.current_node,cut_dimension):
+    #         print("cutting node %d now" %tree.current_node.id)
+    #         ranked_cut_dimension=ranked_diversityIndex_all_dimension(tree.current_node.get_df())
+    #         # print(ranked_cut_dimension)
+    #         print("ranked_cut_dimension=",ranked_cut_dimension)
+    #         cut_dimension=list(ranked_cut_dimension)[-1]
+    #         print ("so cutting on %d"%cut_dimension)
+    #         # print(cut_dimensions,type(cut_dimensions))
+    #         tree.cut_node(tree.current_node,cut_dimension,cut_num)
+    #         for edge in tree.current_node.edges:
+    #             print(edge)
+    #         nodes_to_operate=[]
+    #         for i in tree.nodes_to_cut:
+    #             nodes_to_operate.append(i.id)
+    #         print("nodes to cut:",nodes_to_operate)
+    #     else:
+    #         print("escaping node %d as a leaf node"%tree.current_node.id)
+    #         tree.get_next_node()
+    #         nodes_to_operate=[]
+    #         for i in tree.nodes_to_cut:
+    #             nodes_to_operate.append(i.id)
+    #         print("nodes to cut:",nodes_to_operate)
+
+
+    # ################################################
+    # #saving the DI tree in pkl format
+    # ################################################
+    # with open("DI_tree.pkl", "wb") as f:
+    #     pickle.dump(tree, f)
+
+    # with open("DI_tree.pkl", "rb") as f:
+    #     tree = pickle.load(f)
+
+    # print("##########################")
+    # print("DI tree")
+    # print("##########################")
+    # print(tree)
+    # print("##########################")
+    # print("Tree Results:",tree.compute_result())
+    # print("##########################")
+    # print("Tree  stats:")
+    # tree.print_stats()
+    # print("##########################")
+    # tree.print_layers()
+    # print("##########################")
+    # preorderedNodesID=[]
+    # preorderNodes=tree.preorderTraversal()
+    # for node in preorderNodes:
+    #     preorderedNodesID.append(node.id)
+    # print("preorderedNodesID",preorderedNodesID)
+    # print("##########################")
+    # print("##########################")
+    # # print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+    # print("Tree Results:",tree.compute_result())
+    # print("##########################")
+    # print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+    # print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+    # print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+    # print("##########################")
+    # MSE_DI_list=[]
+    # test_logs=test_logs[0:1000]
+    # for log in test_logs:
+    #     node=tree.search(tree.root,log,tree.root)
+    #     print(" %d log found in node %d"%(log.serialNo,node.id))
+    #     max_log=node.get_max_throughput_log()
+    #     optimal_throughput=optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])]
+    #     cluster_max_throughput=max_log.values[8]
+    #     print("%d throughput is achievable with p(Parallelism) %d, cc(concurrency) %d and pp(pipelining) %d"%(max_log.values[8],max_log.values[5],max_log.values[6],max_log.values[7]))
+    #     print("%d throughput is optimal"%optimal_throughput_dictionary[(log.values[0],log.values[1],log.values[2],log.values[3],log.values[4])])
+    #     if optimal_throughput > cluster_max_throughput:
+    #         MSE_DI_list.append((optimal_throughput-cluster_max_throughput))
+    #     else:
+    #         MSE_DI_list.append(0)
+    # print(MSE_DI_list)
+    # print("##########################")
+    # print("average error for all the test log following DI scheme is =",sum(MSE_DI_list)/len(MSE_DI_list))
+    # print("Tree Results:",tree.compute_result())
+    # print("##########################")
+    # print("Number of test logs %d and training logs %d" %(len(test_logs),len(tree.logs)))
+    # print(" leaf threshold = %d  && number of cut = %d "%(leaf_threshold,cut_num))
+    # print("Number of Groups = %d"%(len(optimal_throughput_dictionary.keys())))
+    # print("##########################")
 
 
 

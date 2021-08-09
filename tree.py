@@ -182,7 +182,7 @@ def same_values_on_dimensionX(node,cut_dimension):
     for value in values_to_be_considered:
         if value not in unique_value_list:
             unique_value_list.append(value)
-    if len(unique_value_list)>1:
+    if len(unique_value_list)>2:
         return False
     else:
         return True
