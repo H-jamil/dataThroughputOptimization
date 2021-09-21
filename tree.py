@@ -23,7 +23,7 @@ class Log:
             self.ranges.append(value)
             self.ranges.append(value+1)
         # print(self.values, type(self.values))
-        self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism','Concurrency','Pipelining', 'Throughput']
+        self.names = ['FileCount','AvgFileSize','BufSize','Bandwidth','AvgRtt','CC_Level','P_Level','PP_Level','numActiveCores','frequency','TotalAvgTput']
 
     def is_intersect(self, dimension, left, right):
         return self.values[dimension]>=left and self.values[dimension]<=right
@@ -83,7 +83,7 @@ class Edge:
 
 class Node:
     def __init__(self,id,parent,ranges,logs,depth,attribute,cut_dimension):
-        self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism', 'Concurrency','Pipelining', 'Throughput']
+        self.names = ['FileCount','AvgFileSize','BufSize','Bandwidth','AvgRtt','CC_Level','P_Level','PP_Level','numActiveCores','frequency','TotalAvgTput']
         self.id = id
         self.parent=parent
         self.ranges = ranges
@@ -101,7 +101,7 @@ class Node:
 
     def get_df(self):
         #self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize','Parallelism', 'Concurrency','Pipelining', 'Throughput']
-        self.names = ['FileSize', 'FileCount','Bandwidth', 'RTT', 'BufferSize']
+        self.names = ['FileCount','AvgFileSize','BufSize','Bandwidth','AvgRtt']
         self.log_values=[]
         for l in self.logs:
             self.log_values.append(l.values[0:5])
@@ -112,10 +112,10 @@ class Node:
     def get_max_throughput_log(self):
         throughput_log_values=[]
         for l in self.logs:
-            throughput_log_values.append(l.values[8])
+            throughput_log_values.append(l.values[10])
         max_throughput_log_values=max(throughput_log_values)
         for l in self.logs:
-            if l.values[8]==max_throughput_log_values:
+            if l.values[10]==max_throughput_log_values:
                 return l
 
     def match(self, packet):
@@ -170,7 +170,7 @@ def get_the_non_overlapping_ranges(range_left,range_right,range_per_cut,cut_num)
             ranges.append(range_left+ i * range_per_cut)
             ranges.append(min(range_right, (range_left + (i + 1) * range_per_cut)))
         else:
-            ranges.append(range_left+ i * range_per_cut+1)
+            ranges.append(range_left+ i * range_per_cut+0.00001)
             ranges.append(min(range_right, (range_left + (i + 1) * range_per_cut)))
     return ranges
 
@@ -182,9 +182,11 @@ def same_values_on_dimensionX(node,cut_dimension):
     for value in values_to_be_considered:
         if value not in unique_value_list:
             unique_value_list.append(value)
-    if len(unique_value_list)>2:
+    if len(unique_value_list)>1:
+        # print (False)
         return False
     else:
+        # print(True)
         return True
 
 def standardDeviation(normalizedList):
@@ -197,8 +199,10 @@ def ranked_SD_all_dimension(df):
     sdindex=[]
     df_norm = df/df.max()
     dimension_pointers=[0,1,2,3,4]
+    # print(df)
     for i in list(df.columns):
         nw_list = df_norm[i].tolist()
+        # print (nw_list,standardDeviation(nw_list))
         sdindex.append(standardDeviation(nw_list))
     sd_dictionary={dimension_pointers[i]: sdindex[i] for i in range(len(sdindex))}
     return {k: v for k, v in sorted(sd_dictionary.items(), key=lambda item: item[1])}
@@ -334,7 +338,8 @@ class Tree:
         self.depth = max(self.depth, node.depth + 1)
         range_left = node.ranges[cut_dimension * 2]
         range_right = node.ranges[cut_dimension * 2 + 1]
-        range_per_cut = math.ceil((range_right - range_left) / cut_num)
+        #range_per_cut = math.ceil((range_right - range_left) / cut_num)
+        range_per_cut = (range_right - range_left) / cut_num
         child_cut_dimension_ranges=get_the_non_overlapping_ranges(range_left,range_right,range_per_cut,cut_num)
         children = []
         children_edges=[]
@@ -384,10 +389,10 @@ class Tree:
 
                 # compute bytes per rule
                 if self.is_leaf_only_node(node):
-                    result["bytes_per_log"] += 2 + 16 * len(node.logs)
+                    result["bytes_per_log"] += 2 + 32 * len(node.logs)
                     result["num_leaf_node"] += 1
                 else:
-                    result["bytes_per_log"] += 2 + 16 + 4 * len(node.children)
+                    result["bytes_per_log"] += 2 + 32 + 4 * len(node.children)
                     result["num_nonleaf_node"] += 1
 
             nodes = next_layer_nodes

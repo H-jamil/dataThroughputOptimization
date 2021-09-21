@@ -6,14 +6,17 @@ from operator import add
 barWidth = 0.25
 fig = plt.subplots(figsize =(15, 10))
 
+#patterns = [ "|", "x", "o", ".", "*","/", "O" ]
+patterns = [ "x", "o", "+" ]
+
 # set height of bar
-# DI_memory=[16.28,16.224,16.89,19.223,18.15,17.79]
-# SD_memory = [16.252,13.72,14.68, 14.226, 13.53, 15.08]
+# DI_memory=[16.28,16.224,16.89,19.223,18.15,17.79,15.10]
+# SD_memory = [16.252,13.72,14.68, 14.226, 13.53, 15.08,15.27]
 # DI_SD_memory= list(map(add, DI_memory, SD_memory))
 # print(DI_SD_memory)
 
-DI_memory=[6,8,8,8,7,7]
-SD_memory = [5,5,6,6,7,7]
+DI_memory=[6,8,8,8,7,7,8]
+SD_memory = [5,5,6,6,7,7,8]
 #DI_SD_memory= list(map(add, DI_memory, SD_memory))
 DI_SD_memory = [max(DI_memory[i],SD_memory[i]) for i in range(len(SD_memory))]
 
@@ -29,12 +32,9 @@ br2 = [x + barWidth for x in br1]
 br3 = [x + barWidth for x in br2]
 
 # Make the plot
-plt.bar(br1, DI_memory, color=(0.2, 0.7, 0.6, 0.6), width = barWidth,
-        edgecolor ='black', label ='Diversity Index')
-plt.bar(br2, SD_memory, color=(0.7, 0.4, 0.6, 0.6), width = barWidth,
-        edgecolor ='black', label ='Standard Deviation')
-plt.bar(br3, DI_SD_memory, color=(0.2, 0.4, 0.7, 0.6), width = barWidth,
-        edgecolor ='black', label ='DI+SD')
+plt.bar(br1, DI_memory, color='white', width=barWidth, edgecolor='black', label ='Diversity Index',hatch=patterns[0])
+plt.bar(br2, SD_memory, color='white', width=barWidth, edgecolor='black', label ='Standard Deviation',hatch=patterns[1])
+plt.bar(br3, DI_SD_memory,color='white', width=barWidth, edgecolor='black', label ='DI+SD',hatch=patterns[2])
 
 # Adding Xticks
 plt.xlabel('HistoryLog', fontweight ='bold', fontsize = 15)
@@ -42,8 +42,9 @@ plt.xlabel('HistoryLog', fontweight ='bold', fontsize = 15)
 plt.ylabel('Worst Case # of memory access', fontweight ='bold', fontsize = 15)
 
 plt.xticks([r + barWidth for r in range(len(DI_memory))],
-        ['xsede_revised_1000','xsede_revised_2000','xsede_revised_3000','xsede_revised_4000','xsede_revised_5000','xsede_revised_6000'])
+        ['xsede_revised_1000','xsede_revised_2000','xsede_revised_3000','xsede_revised_4000','xsede_revised_5000','xsede_revised_6000','xsede_revised'])
 
 plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=2)
 plt.savefig('memory_access.png')
+#plt.savefig('memory.png')
 plt.show()
